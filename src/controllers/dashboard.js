@@ -91,8 +91,9 @@ function executerTransfert(amount,cardNum,benefId,callback){
         callback();
     },500);
 }
-function hundlertransfer(){
-    const amount=parseInt(document.getElementById("amount").value);
+function hundlertransfer(event){
+    event.preventDefault();
+    const amount=parseFloat(document.getElementById("amount").value);
     const benefId=document.getElementById("beneficiary").value;
     const cardNum=document.getElementById("sourceCard").value;
     errorDiv.textContent="";
