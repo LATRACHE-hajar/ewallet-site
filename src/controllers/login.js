@@ -1,4 +1,4 @@
-import finduserbymail from "../models/database.js";
+import {finduserbymail} from "../models/database.js";
 const mail=document.querySelector("#mail");
 const pass=document.querySelector("#password");
 const btnSubmit=document.querySelector("#submitbtn");
