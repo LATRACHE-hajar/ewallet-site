@@ -66,3 +66,12 @@ export const findbeneficiarieByid= (id,beneficiaryId) => {
 export const finduserbyaccount=(numcompte)=>{
     return database.users.find((u)=>u.account===numcompte);
 }
+
+export const getCardsByUserId=(userId)=>{
+  return database.users.find((u)=>u.id===userId).wallet.cards;
+}
+
+export const findCardByNumber=(id,number)=>{
+  const cards=getCardsByUserId(id);
+  return cards.find((c)=>c.numcards===number);
+}

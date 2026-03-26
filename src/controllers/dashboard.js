@@ -1,4 +1,4 @@
-import {getbeneficiaries ,finduserbyaccount,findbeneficiarieByid} from "../models/database.js";
+import {getbeneficiaries ,finduserbyaccount,findbeneficiarieByid,getCardsByUserId,findCardByNumber} from "../models/database.js";
 const user = JSON.parse(sessionStorage.getItem("currentUser"));
 // DOM elements
 const greetingName = document.getElementById("greetingName");
@@ -279,8 +279,9 @@ function addtransactions(expediteur,destinataire,amount){
 // **************************************transfer***************************************************//
 
 function transfer(expediteur, numcompte, amount){
-    checkUser(numcompte).then((destinataire) => {
-        return checkSolde(expediteur, amount)
+    checkUser(numcompte) //p0
+    .then((destinataire) => { //p1
+        return checkSolde(expediteur, amount) //p2
             .then(() => destinataire); //je renvoie la destinataire pour la suite de traitement
     }).then((destinataire) => {
         return updateSolde(expediteur, destinataire, amount)
@@ -319,3 +320,145 @@ function handleTransfer(e) {
   closeTransferBtn.addEventListener("click", closeTransfer);
   cancelTransferBtn.addEventListener("click", closeTransfer);
   submitTransferBtn.addEventListener("click",handleTransfer)
+
+
+  //=========== tp1 partie recharger ==========================================
+  /*function afficherFormulaireRecharge(user){
+    const mesCartes=getCardsByUserId(user);
+    const sectionForm=document.createElement("div");
+    sectionForm.id="formulaireRecharger";
+    sectionForm.innerHTML=`
+      <div class="section-Recharge">
+        <h2>Recharger mon compte </h2>
+        <label>Choisir une carte</label>
+        <select id="select-card">
+
+        </select>
+        <label>Entrer le montant (MAD)</label>
+        <input type="number" placeholder="exemple:500" id="montantRecharge">
+        <button id="submitRecharge">Valider</button>
+        <button id="cancelRecharge">Annuler</button>
+      </div>
+    `;
+    const selectCard=sectionForm.querySelector("#")
+  }
+
+
+//fonction pour remplir le select
+function renderRechargeCards() {
+    const mesCartes = getCardsByUserId(user.id);
+    paymentCardSelect.innerHTML = '<option value="" disabled selected>Sélectionner une carte</option>';
+    mesCartes.forEach(card => {
+        const option = document.createElement("option");
+        option.value = card.numcards; 
+        option.textContent = `${card.type.toUpperCase()} (**** ${card.numcards.slice(-4)}) - Solde: ${card.balance} MAD`;
+        paymentCardSelect.appendChild(option);
+    });
+}
+
+
+function openRechargePopup() {
+    rechargePopup.classList.remove("hidden");
+    rechargePopup.classList.add("active"); 
+    document.body.classList.add("popup-open");
+    renderRechargeCards();
+}
+
+function closeRechargePopup() {
+    rechargePopup.classList.add("hidden");
+    rechargePopup.classList.remove("active");
+    document.body.classList.remove("popup-open");
+}
+
+
+// Événements pour la Recharge
+quickTopupBtn.addEventListener("click", openRechargePopup);
+closeRechargeBtn.addEventListener("click", closeRechargePopup);
+cancelRechargeBtn.addEventListener("click", closeRechargePopup);
+
+*/
+
+
+
+
+const openRechargeBtn = document.getElementById("quickTopup"); 
+const rechargePopup = document.getElementById("rechargePopup");
+const closeRechargeBtn = document.getElementById("closeRechargeBtn");
+const cancelRechargeBtn = document.getElementById("cancelRechargeBtn");
+const rechargeForm = document.getElementById("rechargeForm");
+const paymentCardSelect = document.getElementById("paymentCard");
+const rechargeAmountInput = document.getElementById("rechargeAmount");
+
+//fonction pour remplir le select
+function renderRechargeCards() {
+    const mesCartes = getCardsByUserId(user.id);
+    paymentCardSelect.innerHTML = '<option value="" disabled selected>Sélectionner une carte</option>';
+    mesCartes.forEach(card => {
+        const option = document.createElement("option");
+        option.value = card.numcards; 
+        option.textContent = `${card.type.toUpperCase()} (**** ${card.numcards.slice(-4)}) - Solde: ${card.balance} MAD`;
+        paymentCardSelect.appendChild(option);
+    });
+}
+
+
+function closeRecharge() {
+    rechargePopup.classList.add("hidden"); 
+    rechargePopup.classList.remove("active");  
+    document.body.classList.remove("popup-open"); 
+    rechargeForm.reset();
+}
+
+
+function handleRechargeSection() {
+    rechargePopup.classList.remove("hidden"); 
+    rechargePopup.classList.add("active"); 
+    document.body.classList.add("popup-open"); 
+    renderRechargeCards(); 
+}
+
+
+function handleRecharge(e) {
+    e.preventDefault(); 
+    const cardNum = paymentCardSelect.value;
+    const amount = Number(rechargeAmountInput.value);
+    if (!cardNum) {
+        alert("Veuillez sélectionner une carte.");
+        return;
+    }
+    if (amount <= 0 || isNaN(amount)) {
+        alert("Veuillez entrer un montant valide.");
+        return;
+    }
+    const selectedCard = findCardByNumber(user.id, cardNum);
+    if (!selectedCard) {
+        alert("Carte introuvable.");
+        return;
+    }
+    if (selectedCard.balance < amount) {
+        alert("Solde insuffisant sur cette carte.");
+        return;
+    }
+    selectedCard.balance -= amount; 
+    user.wallet.balance += amount;  
+
+    const transactionRecharge = {
+        id: Date.now().toString(),
+        type: "credit", 
+        amount: amount,
+        date: new Date().toLocaleDateString("fr-FR"),
+        from: `Carte ${selectedCard.type.toUpperCase()}`,
+        to: "Mon Portefeuille"
+    };
+    user.wallet.transactions.push(transactionRecharge);
+    sessionStorage.setItem("currentUser", JSON.stringify(user));
+    renderDashboard();
+    closeRecharge();
+    alert(`Succès ! Votre compte a été rechargé de ${amount} MAD.`);
+}
+
+
+openRechargeBtn.addEventListener("click", handleRechargeSection);
+closeRechargeBtn.addEventListener("click", closeRecharge);
+cancelRechargeBtn.addEventListener("click", closeRecharge);
+

@@ -1126,3 +1126,55 @@ footer {
     display: none;
   }
 }
+
+
+/* =====================
+   POPUP RECHARGE
+===================== */
+
+/* L'arrière-plan grisé qui recouvre toute la page */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* Fond noir semi-transparent */
+  z-index: 1000; /* S'assure que la popup passe par-dessus tout le reste */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Gérer l'état masqué par votre JavaScript */
+.popup-overlay.hidden {
+  display: none !important;
+}
+
+/* La petite fenêtre blanche centrale */
+.popup-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  position: relative;
+  animation: fadeIn 0.3s ease; /* Petite animation d'apparition douce */
+}
+
+/* En-tête de la popup */
+.popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.popup-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #333;
+}
