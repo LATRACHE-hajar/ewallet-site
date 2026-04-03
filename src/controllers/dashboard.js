@@ -381,84 +381,161 @@ cancelRechargeBtn.addEventListener("click", closeRechargePopup);
 
 
 
-const openRechargeBtn = document.getElementById("quickTopup"); 
-const rechargePopup = document.getElementById("rechargePopup");
-const closeRechargeBtn = document.getElementById("closeRechargeBtn");
-const cancelRechargeBtn = document.getElementById("cancelRechargeBtn");
-const rechargeForm = document.getElementById("rechargeForm");
-const paymentCardSelect = document.getElementById("paymentCard");
-const rechargeAmountInput = document.getElementById("rechargeAmount");
+// ===========La partie de Recharge===========
 
-//fonction pour remplir le select
+const openRechargeBtn=document.getElementById("quickTopup");
+const rechargePopup=document.getElementById("rechargePopup");
+const closeRechargeBtn=document.getElementById("closeRechargeBtn");
+const cancelRechargeBtn=document.getElementById("cancelRechargeBtn");
+const rechargeForm=document.getElementById("rechargeForm");
+const paymentCardSelect=document.getElementById("paymentCard");
+const rechargeAmountInput=document.getElementById("rechargeAmount");
+
+//Limites de montant
+const RECHARGE_MIN = 10;
+const RECHARGE_MAX = 5000;
+
+//Remplissage de select des cartes 
 function renderRechargeCards() {
-    const mesCartes = getCardsByUserId(user.id);
-    paymentCardSelect.innerHTML = '<option value="" disabled selected>Sélectionner une carte</option>';
-    mesCartes.forEach(card => {
-        const option = document.createElement("option");
-        option.value = card.numcards; 
-        option.textContent = `${card.type.toUpperCase()} (**** ${card.numcards.slice(-4)}) - Solde: ${card.balance} MAD`;
-        paymentCardSelect.appendChild(option);
+  const mesCartes = getCardsByUserId(user.id);
+  paymentCardSelect.innerHTML = '<option value="" disabled selected>Sélectionner une carte</option>';
+  mesCartes.forEach(card => {
+    const option = document.createElement("option");
+    option.value = card.numcards;
+    option.textContent = `${card.type.toUpperCase()} (**** ${card.numcards.slice(-4)}) — Solde: ${card.balance} MAD`;
+    paymentCardSelect.appendChild(option);
+  });
+}
+
+function openRecharge() {
+  rechargePopup.classList.remove("hidden");
+  rechargePopup.classList.add("active");
+  document.body.classList.add("popup-open");
+  renderRechargeCards();
+}
+
+function closeRecharge() {
+  rechargePopup.classList.add("hidden");
+  rechargePopup.classList.remove("active");
+  document.body.classList.remove("popup-open");
+  rechargeForm.reset();
+}
+
+//Valider les données d'entrée
+function validateInputs(cardNum,amount) {
+  return new Promise((resolve,reject)=>{
+    setTimeout(() => {
+      if (!cardNum) {
+        reject("Veuillez sélectionner une carte");
+        return;
+      }
+      if (isNaN(amount) || amount <= 0) {
+        reject("Le montant doit être supérieur à zéro");
+        return;
+      }
+      if (amount<RECHARGE_MIN) {
+        reject(`Le montant minimum de recharge est ${RECHARGE_MIN} MAD`);
+        return;
+      }
+      if (amount>RECHARGE_MAX) {
+        reject(`Le montant maximum de recharge est ${RECHARGE_MAX} MAD`);
+        return;
+      }
+      resolve({cardNum,amount});
+    }, 300);
+  });
+}
+
+//Verifier que la carte existe et n'est pas expirée
+function checkCard(userId,cardNum) {
+  return new Promise((resolve,reject) => {
+    setTimeout(() => {
+      const card=findCardByNumber(userId, cardNum);
+      if (!card) {
+        reject("Carte introuvable. Veuillez en selectionner une autre");
+        return;
+      }
+      const today = new Date();
+      const expiry = new Date(card.expiry);
+      expiry.setMonth(expiry.getMonth() + 1, 1); 
+      if (today >= expiry) {
+        reject(`La carte **** ${card.numcards.slice(-4)} est expiree, Veuillez en utiliser une autre`);
+        return;
+      }
+      resolve(card);
+    }, 400);
+  });
+}
+
+//Verifier que le solde de la carte est suffisant
+function checkCardBalance(card,amount) {
+  return new Promise((resolve,reject) => {
+    setTimeout(() => {
+      if (card.balance<amount) {
+        reject(`Solde insuffisant sur la carte **** ${card.numcards.slice(-4)}. Solde disponible: ${card.balance} MAD.`);
+        return;
+      }
+      resolve(card);
+    }, 300);
+  });
+}
+
+//Effectuer la recharge
+function processRecharge(card,amount) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      card.balance-=amount;
+      user.wallet.balance+=amount;
+      resolve({card,amount});
+    }, 200);
+  });
+}
+
+//Enregistrer la transaction
+function addRechargeTransaction(card, amount) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const transaction = {
+        id:Date.now().toString(),
+        type:"credit",
+        amount:amount,
+        date:new Date().toLocaleDateString("fr-FR"),
+        from:`Carte ${card.type.toUpperCase()} **** ${card.numcards.slice(-4)}`,
+        to:"Mon Portefeuille"
+      };
+      user.wallet.transactions.push(transaction);
+      sessionStorage.setItem("currentUser", JSON.stringify(user));
+      resolve(`Votre compte a ete recharge de ${amount} MAD avec succès !`);
+    }, 200);
+  });
+}
+
+function recharger(cardNum,amount) {
+  validateInputs(cardNum,amount)
+    .then(({cardNum,amount})=>checkCard(user.id,cardNum)
+      .then(card=>checkCardBalance(card,amount)
+        .then(card=>processRecharge(card,amount))
+        .then(({card,amount})=>addRechargeTransaction(card,amount))
+      )
+    )
+    .then((message)=>{
+      renderDashboard();
+      closeRecharge();
+      alert(message);
+    })
+    .catch((erreur) => {
+      alert("Erreur : "+erreur);
     });
 }
 
-
-function closeRecharge() {
-    rechargePopup.classList.add("hidden"); 
-    rechargePopup.classList.remove("active");  
-    document.body.classList.remove("popup-open"); 
-    rechargeForm.reset();
-}
-
-
-function handleRechargeSection() {
-    rechargePopup.classList.remove("hidden"); 
-    rechargePopup.classList.add("active"); 
-    document.body.classList.add("popup-open"); 
-    renderRechargeCards(); 
-}
-
-
 function handleRecharge(e) {
-    e.preventDefault(); 
-    const cardNum = paymentCardSelect.value;
-    const amount = Number(rechargeAmountInput.value);
-    if (!cardNum) {
-        alert("Veuillez sélectionner une carte.");
-        return;
-    }
-    if (amount <= 0 || isNaN(amount)) {
-        alert("Veuillez entrer un montant valide.");
-        return;
-    }
-    const selectedCard = findCardByNumber(user.id, cardNum);
-    if (!selectedCard) {
-        alert("Carte introuvable.");
-        return;
-    }
-    if (selectedCard.balance < amount) {
-        alert("Solde insuffisant sur cette carte.");
-        return;
-    }
-    selectedCard.balance -= amount; 
-    user.wallet.balance += amount;  
-
-    const transactionRecharge = {
-        id: Date.now().toString(),
-        type: "credit", 
-        amount: amount,
-        date: new Date().toLocaleDateString("fr-FR"),
-        from: `Carte ${selectedCard.type.toUpperCase()}`,
-        to: "Mon Portefeuille"
-    };
-    user.wallet.transactions.push(transactionRecharge);
-    sessionStorage.setItem("currentUser", JSON.stringify(user));
-    renderDashboard();
-    closeRecharge();
-    alert(`Succès ! Votre compte a été rechargé de ${amount} MAD.`);
+  e.preventDefault();
+  const cardNum=paymentCardSelect.value;
+  const amount=Number(rechargeAmountInput.value);
+  recharger(cardNum,amount);
 }
 
-
-openRechargeBtn.addEventListener("click", handleRechargeSection);
+openRechargeBtn.addEventListener("click", openRecharge);
 closeRechargeBtn.addEventListener("click", closeRecharge);
 cancelRechargeBtn.addEventListener("click", closeRecharge);
-
+rechargeForm.addEventListener("submit", handleRecharge);
