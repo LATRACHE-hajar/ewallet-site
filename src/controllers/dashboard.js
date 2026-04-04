@@ -278,7 +278,7 @@ function addtransactions(expediteur,destinataire,amount){
 
 // **************************************transfer***************************************************//
 
-function transfer(expediteur, numcompte, amount){
+/*function transfer(expediteur,numcompte,amount){
     checkUser(numcompte) //p0
     .then((destinataire) => { //p1
         return checkSolde(expediteur, amount) //p2
@@ -299,19 +299,32 @@ function transfer(expediteur, numcompte, amount){
     }).catch((error) => {
         alert(error);
     });
+}*/
+
+async function transfer(expediteur,numcompte,amount) {
+    try {
+        const destinataire = await checkUser(numcompte);
+        await checkSolde(expediteur,amount);
+        await updateSolde(expediteur,destinataire,amount);
+        await addtransactions(expediteur,destinataire,amount);
+        sessionStorage.setItem("currentUser",JSON.stringify(expediteur));
+        renderDashboard();
+        closeTransfer();
+        alert("Transfert réussi !");
+    } catch (error) {
+        alert("Erreur : "+error);
+    }
 }
 
 
-function handleTransfer(e) {
+
+async function handleTransfer(e) {
  e.preventDefault();
   const beneficiaryId = document.getElementById("beneficiary").value;
   const beneficiaryAccount=findbeneficiarieByid(user.id,beneficiaryId).account;
   const sourceCard = document.getElementById("sourceCard").value;
-
   const amount = Number(document.getElementById("amount").value);
-  
-
-  transfer(user, beneficiaryAccount, amount);
+  await transfer(user,beneficiaryAccount,amount);
 
 } 
 
@@ -510,7 +523,7 @@ function addRechargeTransaction(card, amount) {
   });
 }
 
-function recharger(cardNum,amount) {
+/*function recharger(cardNum,amount) {
   validateInputs(cardNum,amount)
     .then(({cardNum,amount})=>checkCard(user.id,cardNum)
       .then(card=>checkCardBalance(card,amount)
@@ -526,13 +539,27 @@ function recharger(cardNum,amount) {
     .catch((erreur) => {
       alert("Erreur : "+erreur);
     });
+}*/
+async function recharger(cardNum,amount) {
+  try {
+    await validateInputs(cardNum,amount);
+    const card = await checkCard(user.id,cardNum);
+    await checkCardBalance(card,amount);
+    await processRecharge(card,amount);
+    const message = await addRechargeTransaction(card,amount);
+    renderDashboard();
+    closeRecharge();
+    alert(message);
+  } catch (erreur) {
+    alert("Erreur : "+erreur);
+  }
 }
 
-function handleRecharge(e) {
+async function handleRecharge(e) {
   e.preventDefault();
   const cardNum=paymentCardSelect.value;
   const amount=Number(rechargeAmountInput.value);
-  recharger(cardNum,amount);
+  await recharger(cardNum,amount);
 }
 
 openRechargeBtn.addEventListener("click", openRecharge);
